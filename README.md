@@ -1,4 +1,4 @@
-# pebble-bin updater
+# aur-pebble-bin-updater
 
 Automated updater for the `pebble-bin` AUR package. It follows the same shape
 as `aur-cursor-bin-updater`: GitHub Actions checks upstream releases, generates
