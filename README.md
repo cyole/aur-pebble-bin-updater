@@ -1,9 +1,8 @@
-# aur-pebble-bin-updater
+# AUR Pebble Binary Updater
 
-Automated updater for the `pebble-bin` AUR package. It follows the same shape
-as `aur-cursor-bin-updater`: GitHub Actions checks upstream releases, generates
-`PKGBUILD` from `PKGBUILD.sed`, commits the new package file, then publishes to
-AUR.
+Automated updater for the `pebble-bin` AUR package. GitHub Actions checks
+upstream releases, generates `PKGBUILD` from `PKGBUILD.sed`, commits the new
+package file, then publishes to AUR.
 
 ## How it works
 
