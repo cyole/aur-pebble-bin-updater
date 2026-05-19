@@ -1,4 +1,4 @@
-# Maintainer: Your Name <you@example.com>
+# Maintainer: Cyole <i@cyole.me>
 
 pkgname=pebble-bin
 pkgver=
@@ -10,13 +10,8 @@ license=("AGPL-3.0-only")
 depends=(
   "dbus"
   "fuse2"
-  "gtk3"
   "hicolor-icon-theme"
   "libayatana-appindicator"
-  "libsecret"
-  "libxdo"
-  "openssl"
-  "webkit2gtk-4.1"
 )
 optdepends=(
   "gnome-keyring: credential storage backend on GNOME-like desktops"
@@ -32,7 +27,7 @@ source=(
   "${_appimage}::${url}/releases/download/v${pkgver}/${_appimage}"
   "pebble-bin.sh"
   "pebble.desktop"
-  "pebble.png::${url}/raw/v${pkgver}/src/assets/app-icon.png"
+  "pebble.png::${url}/raw/v${pkgver}/src-tauri/icons/icon.png"
   "LICENSE::${url}/raw/v${pkgver}/LICENSE"
 )
 sha256sums=(

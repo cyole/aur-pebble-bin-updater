@@ -33,18 +33,20 @@ jobs:
           echo "::group::Checking for updates"
 
           current_pkgver="$(grep -E '^pkgver=' PKGBUILD | cut -d'=' -f2)"
-          echo "Local version: ${current_pkgver}"
+          current_pkgrel="$(grep -E '^pkgrel=' PKGBUILD | cut -d'=' -f2)"
+          current_version="${current_pkgver}-${current_pkgrel}"
+          echo "Local version: ${current_version}"
 
           aur_response="$(curl_json 'https://aur.archlinux.org/rpc/?v=5&type=info&arg[]=pebble-bin' || true)"
           aur_resultcount=0
-          aur_pkgver=""
+          aur_version=""
           if [ -n "${aur_response}" ]; then
             aur_resultcount="$(echo "${aur_response}" | jq -r '.resultcount // 0')"
             if [ "${aur_resultcount}" != "0" ]; then
-              aur_pkgver="$(echo "${aur_response}" | jq -r '.results[0].Version // empty' | cut -d'-' -f1)"
+              aur_version="$(echo "${aur_response}" | jq -r '.results[0].Version // empty')"
             fi
           fi
-          echo "AUR version: ${aur_pkgver:-unknown}"
+          echo "AUR version: ${aur_version:-unknown}"
 
           release_json="$(curl_json -H 'Accept: application/vnd.github+json' \
             -H "Authorization: Bearer ${{ github.token }}" \
@@ -57,6 +59,12 @@ jobs:
           fi
 
           new_pkgver="${new_tag#v}"
+          if [ "${current_pkgver}" = "${new_pkgver}" ]; then
+            new_pkgrel="${current_pkgrel}"
+          else
+            new_pkgrel=1
+          fi
+          new_version="${new_pkgver}-${new_pkgrel}"
           appimage="Pebble_${new_pkgver}_amd64.AppImage"
           checksum_asset="${appimage}.sha256"
           checksum_url="$(echo "${release_json}" | jq -r --arg name "${checksum_asset}" '.assets[] | select(.name == $name) | .browser_download_url')"
@@ -66,10 +74,10 @@ jobs:
             exit 1
           fi
 
-          echo "Latest version: ${new_pkgver}"
-          echo "new_version=${new_pkgver}" >> "${GITHUB_OUTPUT}"
+          echo "Latest version: ${new_version}"
+          echo "new_version=${new_version}" >> "${GITHUB_OUTPUT}"
 
-          if [ "${current_pkgver}" = "${new_pkgver}" ] && [ "${aur_pkgver}" = "${new_pkgver}" ]; then
+          if [ "${current_version}" = "${new_version}" ] && [ "${aur_version}" = "${new_version}" ]; then
             echo "No update needed. Local and AUR versions match latest."
             echo "update_needed=false" >> "${GITHUB_OUTPUT}"
             echo "::endgroup::"
@@ -78,7 +86,7 @@ jobs:
 
           if [ "${aur_resultcount}" = "0" ]; then
             echo "AUR package is missing. Publishing current version."
-          elif [ "${aur_pkgver}" != "${new_pkgver}" ]; then
+          elif [ "${aur_version}" != "${new_version}" ]; then
             echo "AUR version differs from latest. Publishing update."
           else
             echo "Local version differs from latest. Updating PKGBUILD."
@@ -90,11 +98,12 @@ jobs:
           appimage_sha="$(curl_json "${checksum_url}" | awk '{print $1}')"
           wrapper_sha="$(sha256sum pebble-bin.sh | awk '{print $1}')"
           desktop_sha="$(sha256sum pebble.desktop | awk '{print $1}')"
-          icon_sha="$(curl_json "https://raw.githubusercontent.com/QingJ01/Pebble/v${new_pkgver}/src/assets/app-icon.png" | sha256sum | awk '{print $1}')"
+          icon_sha="$(curl_json "https://raw.githubusercontent.com/QingJ01/Pebble/v${new_pkgver}/src-tauri/icons/icon.png" | sha256sum | awk '{print $1}')"
           license_sha="$(curl_json "https://raw.githubusercontent.com/QingJ01/Pebble/v${new_pkgver}/LICENSE" | sha256sum | awk '{print $1}')"
 
           awk \
             -v pkgver="${new_pkgver}" \
+            -v pkgrel="${new_pkgrel}" \
             -v appimage_sha="${appimage_sha}" \
             -v wrapper_sha="${wrapper_sha}" \
             -v desktop_sha="${desktop_sha}" \
@@ -102,6 +111,7 @@ jobs:
             -v license_sha="${license_sha}" \
             'BEGIN {OFS=""}
              /^pkgver=/ {print "pkgver=" pkgver; next}
+             /^pkgrel=/ {print "pkgrel=" pkgrel; next}
              /^sha256sums\[0\]=/ {print "sha256sums[0]=" appimage_sha; next}
              /^sha256sums\[1\]=/ {print "sha256sums[1]=" wrapper_sha; next}
              /^sha256sums\[2\]=/ {print "sha256sums[2]=" desktop_sha; next}
