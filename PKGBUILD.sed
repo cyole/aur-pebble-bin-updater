@@ -9,9 +9,10 @@ url="https://github.com/QingJ01/Pebble"
 license=("AGPL-3.0-only")
 depends=(
   "dbus"
-  "fuse2"
+  "gtk3"
   "hicolor-icon-theme"
   "libayatana-appindicator"
+  "webkit2gtk-4.1"
 )
 optdepends=(
   "gnome-keyring: credential storage backend on GNOME-like desktops"
@@ -44,7 +45,12 @@ sha256sums[3]=
 sha256sums[4]=
 
 package() {
-  install -Dm755 "${srcdir}/${_appimage}" "${pkgdir}/opt/${pkgname}/Pebble.AppImage"
+  rm -rf "${srcdir}/squashfs-root"
+  chmod +x "${srcdir}/${_appimage}"
+  cd "${srcdir}"
+  "./${_appimage}" --appimage-extract usr/bin/pebble >/dev/null
+
+  install -Dm755 "${srcdir}/squashfs-root/usr/bin/pebble" "${pkgdir}/opt/${pkgname}/pebble"
   install -Dm755 "${srcdir}/pebble-bin.sh" "${pkgdir}/usr/bin/pebble"
   install -Dm644 "${srcdir}/pebble.desktop" "${pkgdir}/usr/share/applications/pebble.desktop"
   install -Dm644 "${srcdir}/pebble.png" "${pkgdir}/usr/share/icons/hicolor/512x512/apps/pebble.png"
