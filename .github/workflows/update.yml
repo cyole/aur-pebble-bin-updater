@@ -36,9 +36,13 @@ jobs:
           echo "Local version: ${current_pkgver}"
 
           aur_response="$(curl_json 'https://aur.archlinux.org/rpc/?v=5&type=info&arg[]=pebble-bin' || true)"
+          aur_resultcount=0
           aur_pkgver=""
           if [ -n "${aur_response}" ]; then
-            aur_pkgver="$(echo "${aur_response}" | jq -r '.results[0].Version // empty' | cut -d'-' -f1)"
+            aur_resultcount="$(echo "${aur_response}" | jq -r '.resultcount // 0')"
+            if [ "${aur_resultcount}" != "0" ]; then
+              aur_pkgver="$(echo "${aur_response}" | jq -r '.results[0].Version // empty' | cut -d'-' -f1)"
+            fi
           fi
           echo "AUR version: ${aur_pkgver:-unknown}"
 
@@ -63,17 +67,23 @@ jobs:
           fi
 
           echo "Latest version: ${new_pkgver}"
+          echo "new_version=${new_pkgver}" >> "${GITHUB_OUTPUT}"
 
-          if [ "${current_pkgver}" = "${new_pkgver}" ] && [ "${aur_pkgver:-${current_pkgver}}" = "${new_pkgver}" ]; then
+          if [ "${current_pkgver}" = "${new_pkgver}" ] && [ "${aur_pkgver}" = "${new_pkgver}" ]; then
             echo "No update needed. Local and AUR versions match latest."
             echo "update_needed=false" >> "${GITHUB_OUTPUT}"
             echo "::endgroup::"
             exit 0
           fi
 
-          echo "Update needed."
+          if [ "${aur_resultcount}" = "0" ]; then
+            echo "AUR package is missing. Publishing current version."
+          elif [ "${aur_pkgver}" != "${new_pkgver}" ]; then
+            echo "AUR version differs from latest. Publishing update."
+          else
+            echo "Local version differs from latest. Updating PKGBUILD."
+          fi
           echo "update_needed=true" >> "${GITHUB_OUTPUT}"
-          echo "new_version=${new_pkgver}" >> "${GITHUB_OUTPUT}"
           echo "::endgroup::"
 
           echo "::group::Generating PKGBUILD"
